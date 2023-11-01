@@ -1,0 +1,103 @@
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
+class SodaMachine implements Runnable {
+    private BlockingQueue<Integer> sodaQueue;
+    private String machineName;
+    private static volatile int inventory = 100; // Initial inventory
+    private static final int REORDER_LEVEL = 20; // The level at which to reorder
+    private Stocker stocker;
+
+    public SodaMachine(BlockingQueue<Integer> sodaQueue, String machineName, Stocker stocker) {
+        this.sodaQueue = sodaQueue;
+        this.machineName = machineName;
+        this.stocker=stocker;
+    }
+
+    public void addSoda(int soda) {
+        try {
+            
+                sodaQueue.put(1);
+            
+            System.out.println("Added soda bottles to " + machineName);
+            System.out.println("**********************************************************************");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    public void dispenseSoda() {
+        try {
+                     sodaQueue.take();
+                    System.out.println(machineName + " dispensed 1 soda bottle");
+                    
+                addSoda(1);
+            
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private synchronized void refillFromInventory() {
+        if (inventory >= REORDER_LEVEL) {
+            for (int i = 1; i <=10; i++) {
+                addSoda(1);
+                inventory--;
+            }
+        } else {
+            System.out.println("Stock keeper is out of stock. Cannot refill.");
+        }
+    }
+
+    @Override
+    public void run() {
+        while(true){
+        addSoda(1); // Initially, add 10 bottles to the machine
+        dispenseSoda(); // Concurrently dispense and add back 10 bottles
+        
+            stocker.refillInventory();
+           }
+       }
+    }
+
+ class Stocker{
+     private static volatile int inventory=100;
+     public void refillInventory(){
+         int REORDER_LEVEL=20;
+         if(inventory>=REORDER_LEVEL){
+           System.out.println("Stocker:Inventory is low");
+            
+             try{
+                 Thread.sleep(2000);
+             } catch(InterruptedException e){
+                Thread.currentThread().interrupt();
+         
+             }
+             for(int i=1;i<=10;i++){
+                 inventory++;
+             }
+              
+        
+            System.out.println("Stocker:Inventory is Refilled ");
+             }
+         }
+     }
+ 
+public class SodaMachineDemo {
+    public static void main(String[] args) {
+        BlockingQueue<Integer> sodaQueueA= new LinkedBlockingQueue<>(10);
+        BlockingQueue<Integer> sodaQueueB= new LinkedBlockingQueue<>(10);
+
+        Stocker stocker=new Stocker();
+       
+
+        SodaMachine machineA = new SodaMachine(sodaQueueA, "Machine A",stocker);
+        SodaMachine machineB = new SodaMachine(sodaQueueB, "Machine B",stocker);
+
+        Thread machineAThread = new Thread(machineA);
+        Thread machineBThread = new Thread(machineB);
+
+        machineAThread.start();
+        machineBThread.start();
+    }
+} 
